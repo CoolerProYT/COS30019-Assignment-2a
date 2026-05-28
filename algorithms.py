@@ -2,16 +2,13 @@ import math
 import heapq
 from collections import deque
 
-
-# ── File parsing ───────────────────────────────────────────────────────────────
-
 def parse_file(filename):
     # reads the map file — first line is origin, second is semicolon-separated
     # destinations, then node coords and edges follow
     with open(filename, 'r') as f:
         lines = [line.strip() for line in f if line.strip()]
 
-    origin       = int(lines[0])
+    origin = int(lines[0])
     destinations = [int(d) for d in lines[1].split(';')]
 
     nodes, edges = {}, {}
@@ -20,8 +17,8 @@ def parse_file(filename):
             # looks like "3:(9,11)" — a node with coordinates
             node_id, coord = line.split(':')
             node_id = int(node_id.strip())
-            coord   = coord.strip().strip('()')
-            x, y    = coord.split(',')
+            coord = coord.strip().strip('()')
+            x, y = coord.split(',')
             nodes[node_id] = (float(x), float(y))
             edges.setdefault(node_id, [])
         else:
@@ -33,9 +30,6 @@ def parse_file(filename):
             edges[n1].append((n2, cost))
 
     return origin, destinations, nodes, edges
-
-
-# ── Shared helpers ─────────────────────────────────────────────────────────────
 
 def heuristic(node, destinations, nodes):
     # straight-line distance to the closest goal — used by GBFS, A*, and CUS2
@@ -49,17 +43,12 @@ def sorted_neighbours(node, edges):
     # always expand neighbours in ascending node-ID order so results are deterministic
     return sorted(edges.get(node, []), key=lambda x: x[0])
 
-
-# ── CLI algorithms ─────────────────────────────────────────────────────────────
-# These run to completion and return (goal, nodes_created, path, cost).
-# A return of (None, n, None, 0) means no solution was found.
-
 def DFS(origin, destinations, nodes, edges):
     # classic depth-first: dive as deep as possible before backtracking
     dest_set = set(destinations)
-    stack    = [(origin, [origin], 0)]
-    visited  = set()
-    created  = {origin}
+    stack = [(origin, [origin], 0)]
+    visited = set()
+    created = {origin}
 
     while stack:
         node, path, cost = stack.pop()
@@ -78,9 +67,8 @@ def DFS(origin, destinations, nodes, edges):
 
     return None, len(created), None, 0
 
-
 def BFS(origin, destinations, nodes, edges):
-    # breadth-first: explores level by level, guarantees shortest path (by hops)
+    # breadth-first: explores level by level, guarantees shortest path
     dest_set = set(destinations)
     queue    = deque([(origin, [origin], 0)])
     visited  = {origin}
@@ -100,9 +88,8 @@ def BFS(origin, destinations, nodes, edges):
 
     return None, len(created), None, 0
 
-
 def GBFS(origin, destinations, nodes, edges):
-    # greedy best-first: always chases the node that looks closest to the goal —
+    # greedy best-first: always chases the node that looks closest to the goal
     # fast but not guaranteed to find the cheapest path
     dest_set = set(destinations)
     counter  = 0
@@ -129,15 +116,14 @@ def GBFS(origin, destinations, nodes, edges):
 
     return None, len(created), None, 0
 
-
 def AS(origin, destinations, nodes, edges):
     # A*: balances actual cost so far (g) and estimated remaining distance (h),
     # giving the optimal path as long as the heuristic never overestimates
     dest_set = set(destinations)
-    counter  = 0
-    heap     = [(heuristic(origin, destinations, nodes), counter, origin, [origin], 0)]
-    visited  = {}   # node → best g seen so far
-    created  = {origin}
+    counter = 0
+    heap = [(heuristic(origin, destinations, nodes), counter, origin, [origin], 0)]
+    visited = {}   # node → best g seen so far
+    created = {origin}
 
     while heap:
         f, _, node, path, g = heapq.heappop(heap)
@@ -159,15 +145,14 @@ def AS(origin, destinations, nodes, edges):
 
     return None, len(created), None, 0
 
-
 def CUS1(origin, destinations, nodes, edges):
-    # iterative deepening DFS — runs DFS with depth limit 0, then 1, then 2...
-    # combines DFS's low memory use with BFS's completeness guarantee
+    # iterative deepening DFS, runs DFS with depth limit 0, then 1, then 2...
+    # combines DFS low memory use with BFS's completeness guarantee
     dest_set = set(destinations)
     created  = {origin}
 
     def dls(node, path, depth, visited_in_path):
-        # depth-limited search — returns a result tuple or None if depth exceeded
+        # depth-limited search, returns a result tuple or None if depth exceeded
         if node in dest_set:
             cost = sum(
                 next(c for n2, c in edges.get(path[i], []) if n2 == path[i + 1])
@@ -193,16 +178,15 @@ def CUS1(origin, destinations, nodes, edges):
 
     return None, len(created), None, 0
 
-
 def CUS2(origin, destinations, nodes, edges):
-    # weighted A* (W=1.5) — inflates the heuristic to find a solution faster,
+    # weighted A* (W=1.5), inflates the heuristic to find a solution faster,
     # trading off a bit of optimality for speed
     dest_set = set(destinations)
-    W        = 1.5
-    counter  = 0
-    heap     = [(heuristic(origin, destinations, nodes) * W, counter, origin, [origin], 0)]
-    visited  = {}
-    created  = {origin}
+    W = 1.5
+    counter = 0
+    heap = [(heuristic(origin, destinations, nodes) * W, counter, origin, [origin], 0)]
+    visited = {}
+    created = {origin}
 
     while heap:
         f, _, node, path, g = heapq.heappop(heap)
@@ -224,7 +208,6 @@ def CUS2(origin, destinations, nodes, edges):
 
     return None, len(created), None, 0
 
-
 # maps CLI method name → function
 METHODS = {
     'DFS':  DFS,
@@ -235,14 +218,13 @@ METHODS = {
     'CUS2': CUS2,
 }
 
-
-# ── Generator algorithms (step-by-step, used by the GUI) ──────────────────────
+# Generator algorithms (step-by-step, used by the GUI)
 # Same logic as above, but yield one event at a time so the GUI can animate each
 # decision. Events are tuples:
-#   ('frontier', node, parent, parent_map_snapshot)  — node added to the frontier
-#   ('visit',    node, path, cost, parent_map_snap)  — node being expanded
-#   ('done',     goal, path, cost, nodes_created)    — solution reached
-#   ('no_solution', nodes_created)                   — search exhausted, nothing found
+#   ('frontier', node, parent, parent_map_snapshot) — node added to the frontier
+#   ('visit', node, path, cost, parent_map_snap) — node being expanded
+#   ('done', goal, path, cost, nodes_created) — solution reached
+#   ('no_solution', nodes_created) — search exhausted, nothing found
 
 def DFS_gen(origin, destinations, nodes, edges):
     dest_set   = set(destinations)
@@ -270,7 +252,6 @@ def DFS_gen(origin, destinations, nodes, edges):
                 stack.append((neighbour, path + [neighbour], cost + edge_cost))
 
     yield ('no_solution', len(created))
-
 
 def BFS_gen(origin, destinations, nodes, edges):
     dest_set   = set(destinations)
@@ -448,8 +429,6 @@ GEN_METHODS = {
     'CUS2': CUS2_gen,
 }
 
-
-# ── Output ─────────────────────────────────────────────────────────────────────
 
 def print_result(method, origin, destination, num_nodes, path, path_cost):
     # pretty-prints the CLI result in the expected assignment format

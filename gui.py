@@ -4,66 +4,61 @@ from collections import deque
 
 from algorithms import parse_file, GEN_METHODS
 
-
-# ── Colour palette (Catppuccin Mocha) ─────────────────────────────────────────
-C_BG       = "#1e1e2e"   # window background
-C_CANVAS   = "#181825"   # canvas background
-C_TEXT     = "#cdd6f4"   # normal text
-C_SUBTEXT  = "#585b70"   # dimmed labels / edge cost numbers
-C_PANEL    = "#313244"   # status bar / button backgrounds
-C_DEFAULT  = "#6c7086"   # unvisited node
-C_FRONTIER = "#f9e2af"   # node sitting in the frontier (queued but not expanded yet)
-C_VISITED  = "#89b4fa"   # node that has already been expanded
-C_CURRENT  = "#fab387"   # the node being expanded right now
-C_SOLUTION = "#a6e3a1"   # nodes / edges that form the final solution path
-C_DEST     = "#f38ba8"   # destination / goal nodes
-C_ORIGIN   = "#cba6f7"   # starting node
-C_EDGE     = "#45475a"   # default edge colour
-C_EDGE_SOL = "#a6e3a1"   # edge colour when it's part of the solution
-
+# Color declaration
+COLOR_BG = "#1e1e2e"
+COLOR_CANVAS = "#181825"
+COLOR_TEXT = "#cdd6f4"
+COLOR_SUBTEXT = "#585b70"
+COLOR_PANEL = "#313244"
+COLOR_DEFAULT = "#6c7086"
+COLOR_FRONTIER = "#f9e2af"
+COLOR_VISITED = "#89b4fa"
+COLOR_CURRENT = "#fab387"
+COLOR_SOLUTION = "#a6e3a1"
+COLOR_DEST = "#f38ba8"
+COLOR_ORIGIN = "#cba6f7"
+COLOR_EDGE = "#45475a"
+COLOR_EDGE_SOL = "#a6e3a1"
 
 class SearchGUI:
-    # spacing / size constants — tweak these if things look too cramped or too spread out
-    PAD    = 44    # padding around the graph canvas so nodes aren't clipped
-    NODE_R = 18    # radius of graph nodes
-    TREE_R = 13    # radius of tree nodes (slightly smaller so the tree isn't huge)
-    XGAP   = 56    # horizontal spacing between tree nodes
-    YGAP   = 60    # vertical spacing between tree levels
+    PAD = 44 # padding around the graph canvas so nodes aren't clipped
+    NODE_R = 18 # radius of graph nodes
+    TREE_R = 13 # radius of tree nodes (slightly smaller so the tree isn't huge)
+    XGAP = 56 # horizontal spacing between tree nodes
+    YGAP = 60 # vertical spacing between tree levels
 
-    # (label, delay in milliseconds) — Step-only means the user drives manually
+    # (label, delay in milliseconds), Step-only means the user drives manually
     SPEEDS = [("Slow", 900), ("Medium", 350), ("Fast", 80), ("Step-only", 0)]
 
     def __init__(self, root):
         self.root = root
         self.root.title("Search Algorithm Visualiser")
-        self.root.configure(bg=C_BG)
+        self.root.configure(bg=COLOR_BG)
         self.root.minsize(1200, 680)
 
         # loaded map data
-        self.filename     = None
-        self.origin       = None
+        self.filename = None
+        self.origin = None
         self.destinations = []
-        self.nodes        = {}
-        self.edges        = {}
+        self.nodes = {}
+        self.edges = {}
 
         # playback state
         self.generator = None
-        self.running   = False
-        self.after_id  = None
-        self.delay_ms  = 350
+        self.running  = False
+        self.after_id = None
+        self.delay_ms = 350
 
         # search state (updated on every event from the generator)
-        self.visited    = set()
-        self.frontier   = set()
-        self.current    = None
-        self.cur_path   = []
-        self.sol_path   = []
+        self.visited = set()
+        self.frontier = set()
+        self.current = None
+        self.cur_path = []
+        self.sol_path = []
         self.parent_map = {}
-        self.finished   = False
+        self.finished = False
 
         self._build_ui()
-
-    # ── UI layout ──────────────────────────────────────────────────────────────
 
     def _build_ui(self):
         self._build_topbar()
@@ -76,119 +71,95 @@ class SearchGUI:
         self.t_canvas.bind('<Configure>', lambda _: self._draw_tree())
 
     def _build_topbar(self):
-        top = tk.Frame(self.root, bg=C_BG, pady=6)
+        top = tk.Frame(self.root, bg=COLOR_BG, pady=6)
         top.pack(fill='x', padx=10)
 
-        tk.Label(top, text="Search Visualiser", font=("Segoe UI", 13, "bold"),
-                 bg=C_BG, fg=C_TEXT).pack(side='left', padx=(0, 16))
-
-        tk.Button(top, text="Open Map", command=self._load_file,
-                  bg=C_PANEL, fg=C_TEXT, relief='flat', padx=10, pady=3,
-                  font=("Segoe UI", 9)).pack(side='left', padx=3)
-
-        self.file_lbl = tk.Label(top, text="no file loaded",
-                                  bg=C_BG, fg=C_SUBTEXT, font=("Segoe UI", 9))
+        tk.Label(top, text="Search Visualiser", font=("Segoe UI", 13, "bold"), bg=COLOR_BG, fg=COLOR_TEXT).pack(side='left', padx=(0, 16))
+        tk.Button(top, text="Open Map", command=self._load_file, bg=COLOR_PANEL, fg=COLOR_TEXT, relief='flat', padx=10, pady=3, font=("Segoe UI", 9)).pack(side='left', padx=3)
+        self.file_lbl = tk.Label(top, text="no file loaded", bg=COLOR_BG, fg=COLOR_SUBTEXT, font=("Segoe UI", 9))
         self.file_lbl.pack(side='left', padx=8)
-
-        tk.Label(top, text="Method:", bg=C_BG, fg=C_TEXT,
-                 font=("Segoe UI", 9)).pack(side='left', padx=(18, 3))
+        tk.Label(top, text="Method:", bg=COLOR_BG, fg=COLOR_TEXT, font=("Segoe UI", 9)).pack(side='left', padx=(18, 3))
         self.method_var = tk.StringVar(value='BFS')
-        ttk.Combobox(top, textvariable=self.method_var, width=7,
-                     values=list(GEN_METHODS.keys()),
-                     state='readonly').pack(side='left', padx=3)
-
-        tk.Label(top, text="Speed:", bg=C_BG, fg=C_TEXT,
-                 font=("Segoe UI", 9)).pack(side='left', padx=(18, 3))
+        ttk.Combobox(top, textvariable=self.method_var, width=7, values=list(GEN_METHODS.keys()), state='readonly').pack(side='left', padx=3)
+        tk.Label(top, text="Speed:", bg=COLOR_BG, fg=COLOR_TEXT, font=("Segoe UI", 9)).pack(side='left', padx=(18, 3))
         self.speed_var = tk.StringVar(value='Medium')
-        sp = ttk.Combobox(top, textvariable=self.speed_var, width=10,
-                          values=[s[0] for s in self.SPEEDS], state='readonly')
+        sp = ttk.Combobox(top, textvariable=self.speed_var, width=10, values=[s[0] for s in self.SPEEDS], state='readonly')
         sp.pack(side='left', padx=3)
         sp.bind('<<ComboboxSelected>>', self._on_speed_change)
 
         # control buttons live on the right
-        bf = tk.Frame(top, bg=C_BG)
+        bf = tk.Frame(top, bg=COLOR_BG)
         bf.pack(side='right', padx=6)
-        self.btn_run = self._make_btn(bf, "▶  Run",    "#a6e3a1", self._toggle_run)
-        self._make_btn(bf, "⏭  Step",   "#89b4fa", self._step)
-        self._make_btn(bf, "↺  Reset",  "#f38ba8", self._reset)
+        self.btn_run = self._make_btn(bf, "▶  Run", "#a6e3a1", self._toggle_run)
+        self._make_btn(bf, "⏭  Step", "#89b4fa", self._step)
+        self._make_btn(bf, "↺  Reset", "#f38ba8", self._reset)
 
     def _build_main_panes(self):
-        panes = tk.Frame(self.root, bg=C_BG)
+        panes = tk.Frame(self.root, bg=COLOR_BG)
         panes.pack(fill='both', expand=True, padx=10, pady=(0, 4))
 
         # left: environment graph
-        gf = tk.Frame(panes, bg=C_BG)
+        gf = tk.Frame(panes, bg=COLOR_BG)
         gf.pack(side='left', fill='both', expand=True)
-        tk.Label(gf, text="Environment  (graph)", bg=C_BG, fg=C_TEXT,
-                 font=("Segoe UI", 10, "bold")).pack(anchor='w')
-        self.g_canvas = tk.Canvas(gf, bg=C_CANVAS,
-                                   highlightthickness=1, highlightbackground=C_PANEL)
+        tk.Label(gf, text="Environment  (graph)", bg=COLOR_BG, fg=COLOR_TEXT, font=("Segoe UI", 10, "bold")).pack(anchor='w')
+        self.g_canvas = tk.Canvas(gf, bg=COLOR_CANVAS, highlightthickness=1, highlightbackground=COLOR_PANEL)
         self.g_canvas.pack(fill='both', expand=True)
 
         # right: search tree (fixed width, scrollable)
-        tf = tk.Frame(panes, bg=C_BG, width=430)
+        tf = tk.Frame(panes, bg=COLOR_BG, width=430)
         tf.pack(side='right', fill='both')
         tf.pack_propagate(False)
-        tk.Label(tf, text="Search Tree", bg=C_BG, fg=C_TEXT,
-                 font=("Segoe UI", 10, "bold")).pack(anchor='w')
-
-        tc = tk.Frame(tf, bg=C_CANVAS, highlightthickness=1, highlightbackground=C_PANEL)
+        tk.Label(tf, text="Search Tree", bg=COLOR_BG, fg=COLOR_TEXT, font=("Segoe UI", 10, "bold")).pack(anchor='w')
+        tc = tk.Frame(tf, bg=COLOR_CANVAS, highlightthickness=1, highlightbackground=COLOR_PANEL)
         tc.pack(fill='both', expand=True)
-
         sy = tk.Scrollbar(tc, orient='vertical')
         sy.pack(side='right', fill='y')
         sx = tk.Scrollbar(tc, orient='horizontal')
         sx.pack(side='bottom', fill='x')
 
-        self.t_canvas = tk.Canvas(tc, bg=C_CANVAS, highlightthickness=0,
-                                   yscrollcommand=sy.set, xscrollcommand=sx.set)
+        self.t_canvas = tk.Canvas(tc, bg=COLOR_CANVAS, highlightthickness=0, yscrollcommand=sy.set, xscrollcommand=sx.set)
         self.t_canvas.pack(fill='both', expand=True)
         sy.config(command=self.t_canvas.yview)
         sx.config(command=self.t_canvas.xview)
 
     def _build_statusbar(self):
-        sb = tk.Frame(self.root, bg=C_PANEL, pady=3)
+        sb = tk.Frame(self.root, bg=COLOR_PANEL, pady=3)
         sb.pack(fill='x', padx=10, pady=(0, 4))
 
         self.status_var = tk.StringVar(value="Load a map file to begin.")
-        self.info_var   = tk.StringVar(value="")
+        self.info_var = tk.StringVar(value="")
 
         # left side: what the algorithm is currently doing
-        tk.Label(sb, textvariable=self.status_var, bg=C_PANEL, fg=C_TEXT,
-                 font=("Segoe UI", 9), anchor='w').pack(side='left', padx=10)
+        tk.Label(sb, textvariable=self.status_var, bg=COLOR_PANEL, fg=COLOR_TEXT, font=("Segoe UI", 9), anchor='w').pack(side='left', padx=10)
 
         # right side: solution summary (appears only when done)
-        tk.Label(sb, textvariable=self.info_var, bg=C_PANEL, fg=C_SOLUTION,
-                 font=("Segoe UI", 9, "bold"), anchor='e').pack(side='right', padx=10)
+        tk.Label(sb, textvariable=self.info_var, bg=COLOR_PANEL, fg=COLOR_SOLUTION, font=("Segoe UI", 9, "bold"), anchor='e').pack(side='right', padx=10)
 
     def _build_legend(self):
-        lf = tk.Frame(self.root, bg=C_BG)
+        lf = tk.Frame(self.root, bg=COLOR_BG)
         lf.pack(fill='x', padx=10, pady=(0, 6))
 
-        for color, label in [
-            (C_ORIGIN,   "Origin"),
-            (C_DEST,     "Destination"),
-            (C_CURRENT,  "Current"),
-            (C_FRONTIER, "Frontier"),
-            (C_VISITED,  "Visited"),
-            (C_SOLUTION, "Solution"),
-            (C_DEFAULT,  "Unvisited"),
-        ]:
-            dot = tk.Canvas(lf, width=12, height=12, bg=C_BG, highlightthickness=0)
+        colors = [
+            (COLOR_ORIGIN, "Origin"),
+            (COLOR_DEST, "Destination"),
+            (COLOR_CURRENT,  "Current"),
+            (COLOR_FRONTIER, "Frontier"),
+            (COLOR_VISITED, "Visited"),
+            (COLOR_SOLUTION, "Solution"),
+            (COLOR_DEFAULT, "Unvisited"),
+        ]
+
+        for color, label in colors:
+            dot = tk.Canvas(lf, width=12, height=12, bg=COLOR_BG, highlightthickness=0)
             dot.create_oval(1, 1, 11, 11, fill=color, outline="")
             dot.pack(side='left', padx=(5, 2))
-            tk.Label(lf, text=label, bg=C_BG, fg=C_TEXT,
-                     font=("Segoe UI", 8)).pack(side='left', padx=(0, 8))
+            tk.Label(lf, text=label, bg=COLOR_BG, fg=COLOR_TEXT, font=("Segoe UI", 8)).pack(side='left', padx=(0, 8))
 
     def _make_btn(self, parent, text, color, cmd):
         # small helper so button creation isn't repeated six times
-        b = tk.Button(parent, text=text, command=cmd,
-                      bg=color, fg="#1e1e2e", relief='flat',
-                      padx=10, pady=3, font=("Segoe UI", 9, "bold"))
+        b = tk.Button(parent, text=text, command=cmd, bg=color, fg="#1e1e2e", relief='flat', padx=10, pady=3, font=("Segoe UI", 9, "bold"))
         b.pack(side='left', padx=3)
         return b
-
-    # ── Event handlers ─────────────────────────────────────────────────────────
 
     def _on_speed_change(self, *_):
         # sync the delay_ms whenever the user picks a different speed
@@ -224,15 +195,15 @@ class SearchGUI:
             self.root.after_cancel(self.after_id)
             self.after_id = None
 
-        self.running    = False
-        self.generator  = None
-        self.visited    = set()
-        self.frontier   = set()
-        self.current    = None
-        self.cur_path   = []
-        self.sol_path   = []
+        self.running = False
+        self.generator = None
+        self.visited = set()
+        self.frontier = set()
+        self.current = None
+        self.cur_path = []
+        self.sol_path = []
         self.parent_map = {}
-        self.finished   = False
+        self.finished = False
 
         self.btn_run.config(text="▶  Run")
         self.info_var.set("")
@@ -286,8 +257,7 @@ class SearchGUI:
             return False
         if self.generator is None:
             gen_fn = GEN_METHODS[self.method_var.get()]
-            self.generator = gen_fn(self.origin, self.destinations,
-                                    self.nodes, self.edges)
+            self.generator = gen_fn(self.origin, self.destinations, self.nodes, self.edges)
         return True
 
     def _do_step(self):
@@ -318,9 +288,7 @@ class SearchGUI:
             self.cur_path   = path
             self.frontier.discard(node)
             self.visited.add(node)
-            self.status_var.set(
-                f"Expanding node {node}  |  path cost: {cost:.2f}  |  created: {len(pm)}"
-            )
+            self.status_var.set(f"Expanding node {node}  |  path cost: {cost:.2f}  |  created: {len(pm)}")
 
         elif kind == 'done':
             # we found a goal — highlight the winning path
@@ -348,32 +316,32 @@ class SearchGUI:
     def _graph_xy(self, nid):
         # converts a node's map coordinates to canvas pixel coordinates.
         # Y is flipped so that higher map Y = higher on screen (standard math axes)
-        w   = self.g_canvas.winfo_width()  or 500
-        h   = self.g_canvas.winfo_height() or 400
-        xs  = [p[0] for p in self.nodes.values()]
-        ys  = [p[1] for p in self.nodes.values()]
-        rx  = (max(xs) - min(xs)) or 1
-        ry  = (max(ys) - min(ys)) or 1
+        w = self.g_canvas.winfo_width()  or 500
+        h = self.g_canvas.winfo_height() or 400
+        xs = [p[0] for p in self.nodes.values()]
+        ys = [p[1] for p in self.nodes.values()]
+        rx = (max(xs) - min(xs)) or 1
+        ry = (max(ys) - min(ys)) or 1
         pad = self.PAD
-        cx  = pad + (self.nodes[nid][0] - min(xs)) / rx * (w - 2 * pad)
-        cy  = pad + (1 - (self.nodes[nid][1] - min(ys)) / ry) * (h - 2 * pad)
+        cx = pad + (self.nodes[nid][0] - min(xs)) / rx * (w - 2 * pad)
+        cy = pad + (1 - (self.nodes[nid][1] - min(ys)) / ry) * (h - 2 * pad)
         return cx, cy
 
     def _node_color(self, nid):
         # priority order matters: solution > current > frontier > visited > origin > dest
         if self.sol_path and nid in self.sol_path:
-            return C_SOLUTION
+            return COLOR_SOLUTION
         if nid == self.current:
-            return C_CURRENT
+            return COLOR_CURRENT
         if nid in self.frontier:
-            return C_FRONTIER
+            return COLOR_FRONTIER
         if nid in self.visited:
-            return C_VISITED
+            return COLOR_VISITED
         if nid == self.origin:
-            return C_ORIGIN
+            return COLOR_ORIGIN
         if nid in self.destinations:
-            return C_DEST
-        return C_DEFAULT
+            return COLOR_DEST
+        return COLOR_DEFAULT
 
     def _draw_graph(self):
         c = self.g_canvas
@@ -384,7 +352,7 @@ class SearchGUI:
                 (c.winfo_width() or 300) // 2,
                 (c.winfo_height() or 200) // 2,
                 text="Load a map file to begin",
-                fill=C_SUBTEXT, font=("Segoe UI", 11)
+                fill=COLOR_SUBTEXT, font=("Segoe UI", 11)
             )
             return
 
@@ -403,31 +371,22 @@ class SearchGUI:
                     continue
                 x2, y2   = self._graph_xy(n2)
                 is_sol   = (n1, n2) in sol_edges
-                c.create_line(x1, y1, x2, y2,
-                               fill=C_EDGE_SOL if is_sol else C_EDGE,
-                               width=3 if is_sol else 1,
-                               arrow='last', arrowshape=(9, 11, 4))
+                c.create_line(x1, y1, x2, y2, fill=COLOR_EDGE_SOL if is_sol else COLOR_EDGE, width=3 if is_sol else 1, arrow='last', arrowshape=(9, 11, 4))
                 # tiny cost label near the midpoint
                 mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-                c.create_text(mx + 3, my - 9, text=f"{cost:.0f}",
-                               fill=C_SUBTEXT, font=("Segoe UI", 7))
+                c.create_text(mx + 3, my - 9, text=f"{cost:.0f}", fill=COLOR_SUBTEXT, font=("Segoe UI", 7))
 
         # draw nodes
-        r        = self.NODE_R
+        r = self.NODE_R
         dest_set = set(self.destinations)
         for nid in self.nodes:
             x, y  = self._graph_xy(nid)
             color = self._node_color(nid)
             # extra ring around origin and destination nodes so they stand out
             if nid == self.origin or nid in dest_set:
-                c.create_oval(x - r - 4, y - r - 4, x + r + 4, y + r + 4,
-                               outline=color, width=2, fill="")
-            c.create_oval(x - r, y - r, x + r, y + r,
-                           fill=color, outline=C_BG, width=2)
-            c.create_text(x, y, text=str(nid), fill=C_BG,
-                          font=("Segoe UI", 9, "bold"))
-
-    # ── Tree drawing ───────────────────────────────────────────────────────────
+                c.create_oval(x - r - 4, y - r - 4, x + r + 4, y + r + 4, outline=color, width=2, fill="")
+            c.create_oval(x - r, y - r, x + r, y + r, fill=color, outline=COLOR_BG, width=2)
+            c.create_text(x, y, text=str(nid), fill=COLOR_BG, font=("Segoe UI", 9, "bold"))
 
     def _tree_positions(self):
         # computes (x, y) grid coordinates for each node in the tree.
@@ -449,9 +408,9 @@ class SearchGUI:
             return {}, children
 
         # iterative post-order traversal to assign horizontal (x) positions
-        x_pos   = {}
+        x_pos = {}
         counter = [0]
-        stack   = [(root, False)]
+        stack = [(root, False)]
         while stack:
             node, done = stack.pop()
             if done:
@@ -469,7 +428,7 @@ class SearchGUI:
 
         # BFS to assign depth (y) — root is 0, children are 1, grandchildren 2, ...
         depth = {root: 0}
-        q     = deque([root])
+        q = deque([root])
         while q:
             n = q.popleft()
             for ch in children.get(n, []):
@@ -484,9 +443,7 @@ class SearchGUI:
         c.delete('all')
 
         if not self.parent_map:
-            c.create_text(160, 80,
-                          text="Tree appears here once search starts",
-                          fill=C_SUBTEXT, font=("Segoe UI", 9), justify='center')
+            c.create_text(160, 80, text="Tree appears here once search starts", fill=COLOR_SUBTEXT, font=("Segoe UI", 9), justify='center')
             return
 
         positions, children = self._tree_positions()
@@ -495,7 +452,7 @@ class SearchGUI:
 
         XG = self.XGAP
         YG = self.YGAP
-        r  = self.TREE_R
+        r = self.TREE_R
 
         # size the scroll region to fit the whole tree
         max_x = max(p[0] for p in positions.values())
@@ -528,19 +485,14 @@ class SearchGUI:
                         for i in range(len(self.sol_path) - 1)
                     )
                 )
-                c.create_line(x1, y1 + r, x2, y2 - r,
-                               fill=C_EDGE_SOL if is_sol else C_EDGE,
-                               width=2 if is_sol else 1)
+                c.create_line(x1, y1 + r, x2, y2 - r, fill=COLOR_EDGE_SOL if is_sol else COLOR_EDGE, width=2 if is_sol else 1)
 
         # draw nodes on top of edges
         for nid in positions:
             x, y  = px(nid)
             color = self._node_color(nid)
-            c.create_oval(x - r, y - r, x + r, y + r,
-                           fill=color, outline=C_BG, width=1)
-            c.create_text(x, y, text=str(nid), fill=C_BG,
-                          font=("Segoe UI", 8, "bold"))
+            c.create_oval(x - r, y - r, x + r, y + r, fill=color, outline=COLOR_BG, width=1)
+            c.create_text(x, y, text=str(nid), fill=COLOR_BG, font=("Segoe UI", 8, "bold"))
             # "root" label under the origin node
             if positions[nid][1] == 0:
-                c.create_text(x, y + r + 8, text="root",
-                               fill=C_SUBTEXT, font=("Segoe UI", 7))
+                c.create_text(x, y + r + 8, text="root", fill=COLOR_SUBTEXT, font=("Segoe UI", 7))

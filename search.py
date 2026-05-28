@@ -1,14 +1,3 @@
-"""
-search.py — entry point
-
-Usage:
-  python search.py <filename> <method>         CLI mode
-  python search.py --gui [filename]            GUI mode
-  python search.py                             GUI mode (pick file in dialog)
-
-Methods: DFS, BFS, GBFS, AS, CUS1, CUS2
-"""
-
 import sys
 import os
 
@@ -16,17 +5,15 @@ from algorithms import parse_file, print_result, METHODS
 
 MAPS_DIR = os.path.join(os.path.dirname(__file__), "maps")
 
-
 def resolve_file(filename):
-    # if the file exists as typed, use it; otherwise try the maps/ folder
+    # if the file exists as typed, use it, otherwise try the maps/ folder
     # so users can just write "Map1.txt" instead of "maps/Map1.txt"
     if os.path.exists(filename):
         return filename
     candidate = os.path.join(MAPS_DIR, filename)
     if os.path.exists(candidate):
         return candidate
-    return filename  # return as-is so parse_file raises a clear FileNotFoundError
-
+    return filename
 
 def run_cli(filename, method_name):
     # validates inputs, runs the chosen algorithm, and prints the result
@@ -45,7 +32,6 @@ def run_cli(filename, method_name):
         origin, destinations, nodes, edges
     )
     print_result(method_name, origin, goal, num_nodes, path, path_cost)
-
 
 def run_gui(preload_file=None):
     # tkinter is imported here so CLI mode doesn't need a display at all
@@ -68,17 +54,16 @@ def run_gui(preload_file=None):
 
     root.mainloop()
 
-
 def main():
     args = sys.argv[1:]
 
-    # no arguments, or --gui flag → open the visual interface
+    # no arguments, or --gui flag then open the visual interface
     if not args or args[0] == '--gui':
         preload = args[1] if len(args) >= 2 else None
         run_gui(preload)
         return
 
-    # two arguments → CLI mode
+    # two arguments then run CLI mode
     if len(args) >= 2:
         run_cli(filename=args[0], method_name=args[1].upper())
         return
@@ -87,7 +72,6 @@ def main():
     print(f"       python search.py --gui [filename]")
     print(f"Methods: {', '.join(METHODS.keys())}")
     sys.exit(1)
-
 
 if __name__ == '__main__':
     main()
