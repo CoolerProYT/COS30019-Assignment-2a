@@ -70,9 +70,9 @@ def DFS(origin, destinations, nodes, edges):
 def BFS(origin, destinations, nodes, edges):
     # breadth-first: explores level by level, guarantees shortest path
     dest_set = set(destinations)
-    queue    = deque([(origin, [origin], 0)])
-    visited  = {origin}
-    created  = {origin}
+    queue = deque([(origin, [origin], 0)])
+    visited = {origin}
+    created = {origin}
 
     while queue:
         node, path, cost = queue.popleft()
@@ -92,10 +92,10 @@ def GBFS(origin, destinations, nodes, edges):
     # greedy best-first: always chases the node that looks closest to the goal
     # fast but not guaranteed to find the cheapest path
     dest_set = set(destinations)
-    counter  = 0
-    heap     = [(heuristic(origin, destinations, nodes), counter, origin, [origin], 0)]
-    visited  = set()
-    created  = {origin}
+    counter = 0
+    heap = [(heuristic(origin, destinations, nodes), counter, origin, [origin], 0)]
+    visited = set()
+    created = {origin}
 
     while heap:
         h, _, node, path, cost = heapq.heappop(heap)
@@ -149,7 +149,7 @@ def CUS1(origin, destinations, nodes, edges):
     # iterative deepening DFS, runs DFS with depth limit 0, then 1, then 2...
     # combines DFS low memory use with BFS's completeness guarantee
     dest_set = set(destinations)
-    created  = {origin}
+    created = {origin}
 
     def dls(node, path, depth, visited_in_path):
         # depth-limited search, returns a result tuple or None if depth exceeded
@@ -179,8 +179,7 @@ def CUS1(origin, destinations, nodes, edges):
     return None, len(created), None, 0
 
 def CUS2(origin, destinations, nodes, edges):
-    # weighted A* (W=1.5), inflates the heuristic to find a solution faster,
-    # trading off a bit of optimality for speed
+    # weighted A* (W=1.5), inflates the heuristic to find a solution faster, trading off a bit of optimality for speed
     dest_set = set(destinations)
     W = 1.5
     counter = 0
@@ -219,18 +218,11 @@ METHODS = {
 }
 
 # Generator algorithms (step-by-step, used by the GUI)
-# Same logic as above, but yield one event at a time so the GUI can animate each
-# decision. Events are tuples:
-#   ('frontier', node, parent, parent_map_snapshot) — node added to the frontier
-#   ('visit', node, path, cost, parent_map_snap) — node being expanded
-#   ('done', goal, path, cost, nodes_created) — solution reached
-#   ('no_solution', nodes_created) — search exhausted, nothing found
-
 def DFS_gen(origin, destinations, nodes, edges):
-    dest_set   = set(destinations)
-    stack      = [(origin, [origin], 0)]
-    visited    = set()
-    created    = {origin}
+    dest_set = set(destinations)
+    stack = [(origin, [origin], 0)]
+    visited = set()
+    created = {origin}
     parent_map = {origin: None}
 
     while stack:
@@ -254,10 +246,10 @@ def DFS_gen(origin, destinations, nodes, edges):
     yield ('no_solution', len(created))
 
 def BFS_gen(origin, destinations, nodes, edges):
-    dest_set   = set(destinations)
-    queue      = deque([(origin, [origin], 0)])
-    visited    = {origin}
-    created    = {origin}
+    dest_set = set(destinations)
+    queue = deque([(origin, [origin], 0)])
+    visited = {origin}
+    created = {origin}
     parent_map = {origin: None}
 
     while queue:
@@ -278,13 +270,12 @@ def BFS_gen(origin, destinations, nodes, edges):
 
     yield ('no_solution', len(created))
 
-
 def GBFS_gen(origin, destinations, nodes, edges):
-    dest_set   = set(destinations)
-    counter    = 0
-    heap       = [(heuristic(origin, destinations, nodes), counter, origin, [origin], 0)]
-    visited    = set()
-    created    = {origin}
+    dest_set = set(destinations)
+    counter = 0
+    heap = [(heuristic(origin, destinations, nodes), counter, origin, [origin], 0)]
+    visited = set()
+    created = {origin}
     parent_map = {origin: None}
 
     while heap:
@@ -310,13 +301,12 @@ def GBFS_gen(origin, destinations, nodes, edges):
 
     yield ('no_solution', len(created))
 
-
 def AS_gen(origin, destinations, nodes, edges):
-    dest_set   = set(destinations)
-    counter    = 0
-    heap       = [(heuristic(origin, destinations, nodes), counter, origin, [origin], 0)]
-    visited    = {}
-    created    = {origin}
+    dest_set = set(destinations)
+    counter = 0
+    heap = [(heuristic(origin, destinations, nodes), counter, origin, [origin], 0)]
+    visited = {}
+    created = {origin}
     parent_map = {origin: None}
 
     while heap:
@@ -343,12 +333,11 @@ def AS_gen(origin, destinations, nodes, edges):
 
     yield ('no_solution', len(created))
 
-
 def CUS1_gen(origin, destinations, nodes, edges):
     # iterative deepening — replays at increasing depth limits and yields events
     # for each attempt so the GUI shows the backtracking behaviour
     dest_set = set(destinations)
-    created  = {origin}
+    created = {origin}
 
     def dls(node, path, depth, visited_in_path, pm, events):
         events.append(('visit', node, list(path), 0, dict(pm)))
@@ -384,14 +373,13 @@ def CUS1_gen(origin, destinations, nodes, edges):
 
     yield ('no_solution', len(created))
 
-
 def CUS2_gen(origin, destinations, nodes, edges):
-    dest_set   = set(destinations)
-    W          = 1.5
-    counter    = 0
-    heap       = [(heuristic(origin, destinations, nodes) * W, counter, origin, [origin], 0)]
-    visited    = {}
-    created    = {origin}
+    dest_set = set(destinations)
+    W = 1.5
+    counter = 0
+    heap = [(heuristic(origin, destinations, nodes) * W, counter, origin, [origin], 0)]
+    visited = {}
+    created = {origin}
     parent_map = {origin: None}
 
     while heap:
@@ -418,7 +406,6 @@ def CUS2_gen(origin, destinations, nodes, edges):
 
     yield ('no_solution', len(created))
 
-
 # maps method name → generator function (used by the GUI)
 GEN_METHODS = {
     'DFS':  DFS_gen,
@@ -428,7 +415,6 @@ GEN_METHODS = {
     'CUS1': CUS1_gen,
     'CUS2': CUS2_gen,
 }
-
 
 def print_result(method, origin, destination, num_nodes, path, path_cost):
     # pretty-prints the CLI result in the expected assignment format
